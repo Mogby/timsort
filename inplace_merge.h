@@ -4,7 +4,7 @@
 #define INPLACE_MERGE_H
 
 template <class RandomAccessIterator, class Compare>
-void merge(RandomAccessIterator begin, RandomAccessIterator buffer, 
+void gallopMerge(RandomAccessIterator begin, RandomAccessIterator buffer, 
         ui32 firstBlockLength, ui32 secondBlockLength, ui32 gallop, Compare comp) {
     RandomAccessIterator middle = begin + firstBlockLength;
     RandomAccessIterator end = middle + secondBlockLength;
@@ -27,7 +27,7 @@ void merge(RandomAccessIterator begin, RandomAccessIterator buffer,
             }
             ++gallopCount;
 
-            swap(*(begin++), *(middle++));
+            swapElements(*(begin++), *(middle++));
         } else {
             if (lastBlock != 1) {
                 lastBlock = 1;
@@ -35,7 +35,7 @@ void merge(RandomAccessIterator begin, RandomAccessIterator buffer,
             }
             ++gallopCount;
 
-            swap(*(begin++), *(buffer++));
+            swapElements(*(begin++), *(buffer++));
         }
 
         if (gallopCount == gallop) {
@@ -57,9 +57,9 @@ void merge(RandomAccessIterator begin, RandomAccessIterator buffer,
 }
 
 template <class RandomAccessIterator, class Compare>
-void merge(RandomAccessIterator begin, RandomAccessIterator buffer, 
+void gallopMerge(RandomAccessIterator begin, RandomAccessIterator buffer, 
         ui32 blockLength, ui32 gallop, Compare comp) {
-    merge(begin, buffer, blockLength, blockLength, gallop, comp);
+    gallopMerge(begin, buffer, blockLength, blockLength, gallop, comp);
 }
 
 
@@ -108,7 +108,7 @@ void inplaceMerge(RandomAccessIterator begin, RandomAccessIterator middle, Rando
     //merging blocks
     for (RandomAccessIterator currentBlock = begin + blockLength; currentBlock != bufferBlock;
             currentBlock += blockLength) {
-        merge(currentBlock - blockLength, bufferBlock, blockLength, gallop, comp);
+        gallopMerge(currentBlock - blockLength, bufferBlock, blockLength, gallop, comp);
     }
 
     //sorting buffer
@@ -127,11 +127,11 @@ void inplaceMerge(RandomAccessIterator begin, RandomAccessIterator middle, Rando
     if (end - begin >= 3 * blockLength) {
         for (RandomAccessIterator currentBlock = end - 3 * blockLength; currentBlock >= begin;
                 currentBlock -= blockLength) {
-            merge(currentBlock, bufferBlock, blockLength, gallop, comp);
+            gallopMerge(currentBlock, bufferBlock, blockLength, gallop, comp);
         }
     }
 
-    merge(begin, bufferBlock, (end - begin) % blockLength, blockLength, gallop, comp);
+    gallopMerge(begin, bufferBlock, (end - begin) % blockLength, blockLength, gallop, comp);
 
     insertionSort(bufferBlock, bufferBlock + blockLength, comp);
 

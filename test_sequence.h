@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef TEST_SEQUENCE
-#define TEST_SEQUENCE
+#ifndef TEST_SEQUENCE_H
+#define TEST_SEQUENCE_H
 
 #include <ctime>
 #include <cstdlib>
@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
-#include "timsort.h"
 #include "test_generator.h"
 
 template <class RandomAccessIterator>
@@ -116,6 +115,40 @@ bool runArrayTest(ui32 testSize, ECollisionProbability collisionProbability, Tes
     return result;
 }
 
+template <class DataType, class Compare = LessCompare<DataType>>
+bool runPartiallySortedTest(ui32 testSize, ui32 stepSize, TestGenerator &generator, 
+        Compare comp = Compare()) {
+    std::vector<DataType> testVector = generator.generateVectorTest<DataType>(testSize, CP_MEDIUM);
+
+    for (ui32 pointer = 0; pointer < testVector.size(); pointer += stepSize) {
+        if (pointer + stepSize > testVector.size()) {
+            std::sort(testVector.begin() + pointer, testVector.end(), comp);
+        } else {
+            std::sort(testVector.begin() + pointer, testVector.begin() + pointer + stepSize, comp);
+        }
+    }
+
+    std::vector<DataType> controlVector;
+    controlVector = testVector;
+
+    TestResult sortTimes = runSorts(testVector.begin(), testVector.end(),
+            controlVector.begin(), controlVector.end(), comp);
+    bool result = areRangesEqual(testVector.begin(), testVector.end(), 
+            controlVector.begin(), controlVector.end());
+
+    printTestMessage(result, testSize, CP_MEDIUM, sortTimes);
+
+    return result;
+}
+
+#define RUN_VECTOR_INT_TESTS
+#define RUN_ARRAY_INT_TESTS
+#define RUN_ARRAY_INT_ASCENDING_TESTS
+#define RUN_VECTOR_FLOAT_TESTS
+#define RUN_ARRAY_OF_POINT3D_TESTS
+#define RUN_ARRAY_OF_STRING_TESTS
+#define RUN_VECTOR_PARTIALLY_SORTED_TESTS
+
 void runTestSequence(ui32 testsCount = 1, ui32 maxTestSize = 110000) {
     srand(0451);
 
@@ -126,20 +159,25 @@ void runTestSequence(ui32 testsCount = 1, ui32 maxTestSize = 110000) {
         testSizes[testsCount] = rand() % maxTestSize;
     }
 
+#ifdef RUN_VECTOR_INT_TESTS
     std::cout << "vector<int> tests:" << std::endl;
     for (auto it = testSizes.begin(); it != testSizes.end(); ++it) {
         runVectorTest<int>(*it, CP_LOW, generator);
         runVectorTest<int>(*it, CP_MEDIUM, generator);
         runVectorTest<int>(*it, CP_HIGH, generator);
     }
+#endif
 
+#ifdef RUN_ARRAY_INT_TESTS
     std::cout << "array of int tests:" << std::endl;
     for (auto it = testSizes.begin(); it != testSizes.end(); ++it) {
         runArrayTest<int>(*it, CP_LOW, generator);
         runArrayTest<int>(*it, CP_MEDIUM, generator);
         runArrayTest<int>(*it, CP_HIGH, generator);
     }
+#endif
 
+#ifdef RUN_ARRAY_INT_ASCENDING_TESTS
     std::greater<int> comp;
     std::cout << "int ascending sort tests:" << std::endl;
     for (auto it = testSizes.begin(); it != testSizes.end(); ++it) {
@@ -147,27 +185,44 @@ void runTestSequence(ui32 testsCount = 1, ui32 maxTestSize = 110000) {
         runArrayTest<int>(*it, CP_MEDIUM, generator, comp);
         runArrayTest<int>(*it, CP_HIGH, generator, comp);
     }
+#endif
 
+#ifdef RUN_VECTOR_INT_TESTS
     std::cout << "vector<float> tests:" << std::endl;
     for (auto it = testSizes.begin(); it != testSizes.end(); ++it) {
         runVectorTest<float>(*it, CP_LOW, generator);
         runVectorTest<float>(*it, CP_MEDIUM, generator);
         runVectorTest<float>(*it, CP_HIGH, generator);
     }
+#endif
 
-    std::cout << "array of pair<int, int> tests:" << std::endl;
+#ifdef RUN_ARRAY_OF_POINT3D_TESTS
+    std::cout << "array of Point3D tests:" << std::endl;
     for (auto it = testSizes.begin(); it != testSizes.end(); ++it) {
-        runArrayTest<std::pair<int, int>>(*it, CP_LOW, generator);
-        runArrayTest<std::pair<int, int>>(*it, CP_MEDIUM, generator);
-        runArrayTest<std::pair<int, int>>(*it, CP_HIGH, generator);
+        runArrayTest<Point3D>(*it, CP_LOW, generator);
+        runArrayTest<Point3D>(*it, CP_MEDIUM, generator);
+        runArrayTest<Point3D>(*it, CP_HIGH, generator);
     }
+#endif
 
+#ifdef RUN_ARRAY_OF_STRING_TESTS
     std::cout << "array of string test:" << std::endl;
     for (auto it = testSizes.begin(); it != testSizes.end(); ++it) {
         runArrayTest<std::string>(*it, CP_LOW, generator);
         runArrayTest<std::string>(*it, CP_MEDIUM, generator);
         runArrayTest<std::string>(*it, CP_HIGH, generator);
-   }
+    }
+#endif
+
+#ifdef RUN_VECTOR_PARTIALLY_SORTED_TESTS
+    std::cout << "partially sorted vector tests:" << std::endl;
+
+    runPartiallySortedTest<int>(200000, 20, generator);
+    runPartiallySortedTest<int>(40000, 40, generator);
+    runPartiallySortedTest<int>(8000, 100, generator);
+    runPartiallySortedTest<int>(1280, 128, generator);
+    runPartiallySortedTest<int>(4096, 1024, generator);
+#endif
 
 }
 

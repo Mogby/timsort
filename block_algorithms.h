@@ -4,7 +4,7 @@
 #define BLOCK_ALGORITHMS_H
 
 template <class ValueType>
-inline void swap(ValueType &first, ValueType &second) {
+inline void swapElements(ValueType &first, ValueType &second) {
     ValueType temp = first;
     first = second;
     second = temp;
@@ -14,7 +14,7 @@ template <class RandomAccessIterator>
 void swapBlocks(RandomAccessIterator firstBegin, RandomAccessIterator firstEnd,
         RandomAccessIterator secondBegin, RandomAccessIterator secondEnd) {
     while (firstBegin != firstEnd && secondBegin != secondEnd) {
-        swap(*firstBegin, *secondBegin);
+        swapElements(*firstBegin, *secondBegin);
         ++firstBegin;
         ++secondBegin;
     }
@@ -42,7 +42,7 @@ template <class RandomAccessIterator>
 void reverseBlock(RandomAccessIterator begin, RandomAccessIterator end) {
     --end;
     while (begin < end) {
-        swap(*begin, *end);
+        swapElements(*begin, *end);
         ++begin;
         --end;
     }

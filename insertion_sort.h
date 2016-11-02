@@ -11,7 +11,7 @@ void insertionSort(RandomAccessIterator begin, RandomAccessIterator end, Compare
         RandomAccessIterator insertPosition = pointer;
 
         while (insertPosition != begin && comp(*insertPosition, *(insertPosition - 1))) {
-            swap(*insertPosition, *(insertPosition - 1));
+            swapElements(*insertPosition, *(insertPosition - 1));
             --insertPosition;
         }
     }

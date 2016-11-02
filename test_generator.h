@@ -36,13 +36,47 @@ public:
 
 };
 
+struct Point3D {
+    int x, y, z;
+
+    bool operator<(const Point3D &other) const {
+        if (x != other.x) {
+            return x < other.x;
+        } else if (y != other.y) {
+            return y < other.y;
+        } else {
+            return z < other.z;
+        }
+    }
+
+    bool operator==(const Point3D &other) const {
+        return x == other.x && y == other.y && z == other.z;
+    }
+
+    bool operator!=(const Point3D &other) const {
+        return !(*this == other);
+    }
+
+    Point3D() {}
+};
+
 template <>
-class RandomFactory<std::pair<int, int>> {
+class RandomFactory<Point3D> {
 public:
 
-    std::pair<int, int> generateObject(ui32 range) {
-        return std::pair<int, int> (rand() % static_cast<int>(sqrt(range)), 
-                rand() % static_cast<int>(sqrt(range)));
+    Point3D generateObject(ui32 range) {
+        Point3D result;
+        
+        int coordinatesRange = 1;
+        while (coordinatesRange * coordinatesRange * coordinatesRange < range) {
+            ++coordinatesRange;
+        }
+
+        result.x = rand() % coordinatesRange;
+        result.y = rand() % coordinatesRange;
+        result.z = rand() % coordinatesRange;
+
+        return result;
     }
 
 };
