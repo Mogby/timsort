@@ -15,15 +15,51 @@ typedef unsigned int ui32;
 #include "inplace_merge.h"
 
 template <class RandomAccessIterator, class Compare>
-void timSort(RandomAccessIterator begin, RandomAccessIterator end, Compare comp, 
-        const ITimSortParams &params = DefaultParams()) {
-    //initialization
-    ui32 minrun = params.minRun(end - begin);
-    ui32 runsCount;
-    RunStack<RandomAccessIterator> runs;
+void supportInvariant(RunStack<RandomAccessIterator> &runs,
+        Compare comp, const ITimSortParams &params) {
     RunInfo<RandomAccessIterator> runX, runY, runZ;
 
-    //splitting array into runs
+    bool needMerge = true;
+    ui32 runsCount = runs.getLastThreeRuns(runX, runY, runZ);
+    while (runsCount >= 3 && needMerge) {
+        switch (params.whatMerge(runX.size, runY.size, runZ.size)) {
+            case WM_MergeXY:
+                inplaceMerge(runY.begin, runX.begin, runX.begin + runX.size, comp, params.GetGallop());
+                runs.pop();
+                runs.pop();
+                runs.emplace(runY.begin, runY.size + runX.size);
+                break;
+            case WM_MergeYZ:
+                inplaceMerge(runZ.begin, runY.begin, runY.begin + runY.size, comp, params.GetGallop());
+                runs.pop();
+                runs.pop();
+                runs.pop();
+                runs.emplace(runZ.begin, runZ.size + runY.size);
+                runs.emplace(runX.begin, runX.size);
+                break;
+            case WM_NoMerge:
+                needMerge = false;
+                break;
+        }
+
+        runsCount = runs.getLastThreeRuns(runX, runY, runZ);
+    } 
+
+    if (runsCount == 2) {
+        if (params.needMerge(runX.size, runY.size)) {
+            inplaceMerge(runY.begin, runX.begin, runX.begin + runX.size, comp, params.GetGallop());
+            runs.pop();
+            runs.pop();
+            runs.emplace(runY.begin, runY.size + runX.size);
+        }
+    }
+}
+
+template <class RandomAccessIterator, class Compare>
+void splitArrayIntoRuns(RandomAccessIterator begin, RandomAccessIterator end, Compare comp,
+        RunStack<RandomAccessIterator> &runs, const ITimSortParams &params) {
+    ui32 minrun = params.minRun(end - begin);
+
     for (RandomAccessIterator runBegin = begin; runBegin != end;) {
         RandomAccessIterator runEnd = runBegin + 1;
 
@@ -56,46 +92,18 @@ void timSort(RandomAccessIterator begin, RandomAccessIterator end, Compare comp,
 
         runs.emplace(runBegin, runEnd - runBegin);
 
-        bool needMerge = true;
-        ui32 runsCount = runs.getLastThreeRuns(runX, runY, runZ);
-        while (runsCount >= 3 && needMerge) {
-            switch (params.whatMerge(runX.size, runY.size, runZ.size)) {
-                case WM_MergeXY:
-                    inplaceMerge(runY.begin, runX.begin, runX.begin + runX.size, comp, params.GetGallop());
-                    runs.pop();
-                    runs.pop();
-                    runs.emplace(runY.begin, runY.size + runX.size);
-                    break;
-                case WM_MergeYZ:
-                    inplaceMerge(runZ.begin, runY.begin, runY.begin + runY.size, comp, params.GetGallop());
-                    runs.pop();
-                    runs.pop();
-                    runs.pop();
-                    runs.emplace(runZ.begin, runZ.size + runY.size);
-                    runs.emplace(runX.begin, runX.size);
-                    break;
-                case WM_NoMerge:
-                    needMerge = false;
-                    break;
-            }
-
-            runsCount = runs.getLastThreeRuns(runX, runY, runZ);
-        } 
-        
-        if (runsCount == 2) {
-            if (params.needMerge(runX.size, runY.size)) {
-                inplaceMerge(runY.begin, runX.begin, runX.begin + runX.size, comp, params.GetGallop());
-                runs.pop();
-                runs.pop();
-                runs.emplace(runY.begin, runY.size + runX.size);
-            }
-        }
+        supportInvariant(runs, comp, params);
 
         runBegin = runEnd;
     }
+}
 
-    runsCount = runs.getLastThreeRuns(runX, runY, runZ);
-    //merging runs
+template <class RandomAccessIterator, class Compare>
+void mergeRuns(RunStack<RandomAccessIterator> &runs, Compare comp,
+        const ITimSortParams &params) {
+    RunInfo<RandomAccessIterator> runX, runY, runZ;
+    ui32 runsCount = runs.getLastThreeRuns(runX, runY, runZ);
+
     while (runsCount > 1) {
         inplaceMerge(runY.begin, runX.begin, runX.begin + runX.size, comp, params.GetGallop());
 
@@ -105,6 +113,17 @@ void timSort(RandomAccessIterator begin, RandomAccessIterator end, Compare comp,
 
         runsCount = runs.getLastThreeRuns(runX, runY, runZ);
     }
+}
+
+template <class RandomAccessIterator, class Compare>
+void timSort(RandomAccessIterator begin, RandomAccessIterator end, Compare comp, 
+        const ITimSortParams &params = DefaultParams()) {
+
+    RunStack<RandomAccessIterator> runs;
+
+    splitArrayIntoRuns(begin, end, comp, runs, params);
+
+    mergeRuns(runs, comp, params);
 
 }
 

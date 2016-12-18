@@ -25,44 +25,44 @@ public:
 class DefaultParams : public ITimSortParams {
 public:
 
-    virtual ui32 minRun(ui32 count) const {
-        ui32 addBit = 0;
-    
-        while (count >= 4) {
-            addBit |= count & 1;
-            count >>= 1;
-        }
+    virtual ui32 minRun(ui32 count) const;
 
-        return count + addBit;
-    }
+    virtual bool needMerge(ui32 lenX, ui32 lenY) const;
 
-    virtual bool needMerge(ui32 lenX, ui32 lenY) const {
-        return lenY <= lenX;
-    }
+    virtual EWhatMerge whatMerge(ui32 lenX, ui32 lenY, ui32 lenZ) const;
 
-    virtual EWhatMerge whatMerge(ui32 lenX, ui32 lenY, ui32 lenZ) const {
-        if (lenZ > lenX + lenY && lenY > lenX) {
-            return WM_NoMerge;
-        } else if (lenX < lenZ) {
-            return WM_MergeXY;
-        } else {
-            return WM_MergeYZ;
-        }
-    }
-
-    virtual ui32 GetGallop() const {
-        return 7;
-    }
+    virtual ui32 GetGallop() const;
 
 };
 
-class ChaoticParams : DefaultParams {
+ui32 DefaultParams::minRun(ui32 count) const {
+    ui32 addBit = 0;
 
-    virtual ui32 minRun(ui32 count) const {
-        return 1;
+    while (count >= 4) {
+        addBit |= count & 1;
+        count >>= 1;
     }
 
-};
+    return count + addBit;
+}
+
+bool DefaultParams::needMerge(ui32 lenX, ui32 lenY) const {
+    return lenY <= lenX;
+}
+
+EWhatMerge DefaultParams::whatMerge(ui32 lenX, ui32 lenY, ui32 lenZ) const {
+    if (lenZ > lenX + lenY && lenY > lenX) {
+        return WM_NoMerge;
+    } else if (lenX < lenZ) {
+        return WM_MergeXY;
+    } else {
+        return WM_MergeYZ;
+    }
+}
+
+ui32 DefaultParams::GetGallop() const {
+    return 7;
+}
 
 #endif
 
