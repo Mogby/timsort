@@ -5,7 +5,6 @@
 #include <cassert>
 
 int main() {
-    //runTestSequence();
     
     Deque<int> d;
 
@@ -17,7 +16,7 @@ int main() {
     }
     std::cout << std::endl;
 
-    timSort(d.begin(), d.end());
+    timSort(d.begin(), d.end(), std::greater<int>());
 
     std::cout << "SORTED DEQUE?\n";
 
@@ -27,6 +26,8 @@ int main() {
             assert(d[i] >= d[i-1]);
         }
     }
+
+    //runTestSequence();
 
     return 0;
 }

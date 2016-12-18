@@ -15,6 +15,24 @@ typedef unsigned int ui32;
 #include "inplace_merge.h"
 
 template <class RandomAccessIterator, class Compare>
+void mergeXY(RunInfo<RandomAccessIterator> runX, RunInfo<RandomAccessIterator> runY,
+        RunStack<RandomAccessIterator> &runs, Compare comp, const ITimSortParams &params) {
+    inplaceMerge(runY.begin, runX.begin, runX.begin + runX.size, comp, params.GetGallop());
+    runs.pop();
+    runs.pop();
+    runs.emplace(runY.begin, runY.size + runX.size);
+}
+
+template <class RandomAccessIterator, class Compare>
+void mergeYZ(RunInfo<RandomAccessIterator> runX, RunInfo<RandomAccessIterator> runY,
+        RunInfo<RandomAccessIterator> runZ, RunStack<RandomAccessIterator> &runs, 
+        Compare comp, const ITimSortParams &params) {
+    runs.pop();
+    mergeXY(runY, runZ, runs, comp, params);
+    runs.emplace(runX.begin, runX.size);
+}
+
+template <class RandomAccessIterator, class Compare>
 void supportInvariant(RunStack<RandomAccessIterator> &runs,
         Compare comp, const ITimSortParams &params) {
     RunInfo<RandomAccessIterator> runX, runY, runZ;
@@ -24,19 +42,11 @@ void supportInvariant(RunStack<RandomAccessIterator> &runs,
     while (runsCount >= 3 && needMerge) {
         switch (params.whatMerge(runX.size, runY.size, runZ.size)) {
             case WM_MergeXY:
-                inplaceMerge(runY.begin, runX.begin, runX.begin + runX.size, comp, params.GetGallop());
-                runs.pop();
-                runs.pop();
-                runs.emplace(runY.begin, runY.size + runX.size);
+                mergeXY(runX, runY, runs, comp, params);
                 break;
             case WM_MergeYZ:
-                inplaceMerge(runZ.begin, runY.begin, runY.begin + runY.size, comp, params.GetGallop());
-                runs.pop();
-                runs.pop();
-                runs.pop();
-                runs.emplace(runZ.begin, runZ.size + runY.size);
-                runs.emplace(runX.begin, runX.size);
-                break;
+                mergeYZ(runX, runY, runZ, runs, comp, params);
+               break;
             case WM_NoMerge:
                 needMerge = false;
                 break;
@@ -47,10 +57,7 @@ void supportInvariant(RunStack<RandomAccessIterator> &runs,
 
     if (runsCount == 2) {
         if (params.needMerge(runX.size, runY.size)) {
-            inplaceMerge(runY.begin, runX.begin, runX.begin + runX.size, comp, params.GetGallop());
-            runs.pop();
-            runs.pop();
-            runs.emplace(runY.begin, runY.size + runX.size);
+            mergeXY(runX, runY, runs, comp, params);
         }
     }
 }
@@ -67,15 +74,10 @@ void splitArrayIntoRuns(RandomAccessIterator begin, RandomAccessIterator end, Co
             ++runEnd;
         }
 
-        bool isDescending;
-        if (runEnd == end) {
-            isDescending = false;
-        } else {
-            isDescending = comp(*runEnd, *runBegin);
-        }
+        bool isDescending = (runEnd == end ? false : comp(*runEnd, *runBegin));
 
-        while (runEnd != end &&
-            ((isDescending ? comp(*runEnd, *(runEnd - 1)) : comp(*(runEnd - 1), *runEnd)) ||
+        while (runEnd != end && 
+                ((isDescending ? comp(*runEnd, *(runEnd - 1)) : comp(*(runEnd - 1), *runEnd)) ||
             areEqual(runEnd, runEnd - 1, comp))) {
             ++runEnd;
         }

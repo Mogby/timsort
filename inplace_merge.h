@@ -52,8 +52,6 @@ void gallopMerge(RandomAccessIterator begin, RandomAccessIterator buffer,
         if (gallopCount == gallop) {
             gallopCount = 0;
 
-            RandomAccessIterator rangeEnd;
-
             if (lastBlock == 0) {
                 doGallop(middle, end, buffer, begin, comp);
             } else {
@@ -80,13 +78,9 @@ ui32 findBlockLength(RandomAccessIterator begin, RandomAccessIterator end) {
     return blockLength;
 }
 
-template <class RandomAccessIterator, class Compare>
-void inplaceMerge(RandomAccessIterator begin, RandomAccessIterator middle, RandomAccessIterator end,
-        Compare comp, ui32 gallop) {
-    ui32 blockLength = findBlockLength(begin, end);
-    ui32 remainingSize = blockLength + (end - begin) % blockLength;
-
-    //looking for buffer block
+template <class RandomAccessIterator>
+RandomAccessIterator prepareBufferBlock(RandomAccessIterator begin, RandomAccessIterator middle,
+        RandomAccessIterator end, ui32 blockLength, ui32 remainingSize) {
     RandomAccessIterator bufferBlock = end;
     for (RandomAccessIterator pointer = begin; end - pointer >= blockLength; pointer += blockLength) {
         if (pointer <= middle && middle < pointer + blockLength) {
@@ -99,16 +93,18 @@ void inplaceMerge(RandomAccessIterator begin, RandomAccessIterator middle, Rando
                 end - remainingSize, end - remainingSize + blockLength);
     }
 
-    bufferBlock = end - remainingSize;
+    return end - remainingSize;
+}
 
-    //sorting blocks
+template <class RandomAccessIterator, class Compare>
+void sortBlocks(RandomAccessIterator begin, RandomAccessIterator end, Compare comp, ui32 blockLength) {
     RandomAccessIterator minBlock;
-    for (RandomAccessIterator insertPosition = begin; insertPosition != bufferBlock; 
+    for (RandomAccessIterator insertPosition = begin; insertPosition != end; 
             insertPosition += blockLength) {
         minBlock = insertPosition;
 
         for (RandomAccessIterator currentBlock = insertPosition + blockLength;
-                currentBlock != bufferBlock; currentBlock += blockLength) {
+                currentBlock != end; currentBlock += blockLength) {
             if (compareBlocks(currentBlock, currentBlock + blockLength, 
                         minBlock, minBlock + blockLength, comp)) {
                 minBlock = currentBlock;
@@ -117,26 +113,20 @@ void inplaceMerge(RandomAccessIterator begin, RandomAccessIterator middle, Rando
 
         swapBlocks(minBlock, minBlock + blockLength, insertPosition, insertPosition + blockLength);
     }
+}
 
-    //merging blocks
-    for (RandomAccessIterator currentBlock = begin + blockLength; currentBlock != bufferBlock;
+template <class RandomAccessIterator, class Compare>
+void mergeBlocks(RandomAccessIterator begin, RandomAccessIterator end, Compare comp,
+        ui32 blockLength, ui32 gallop) {
+    for (RandomAccessIterator currentBlock = begin + blockLength; currentBlock != end;
             currentBlock += blockLength) {
-        gallopMerge(currentBlock - blockLength, bufferBlock, blockLength, gallop, comp);
+        gallopMerge(currentBlock - blockLength, end, blockLength, gallop, comp);
     }
+}
 
-    //sorting buffer
-
-    if (end - begin <= 2 * remainingSize) {
-        insertionSort(begin, end, comp);
-        return;
-    }
-
-    insertionSort(end - 2 * remainingSize, end, comp);
-
-    //merging blocks in reverse order
-
-    blockLength = remainingSize;
-
+template <class RandomAccessIterator, class Compare>
+void reverseMergeBlocks(RandomAccessIterator begin, RandomAccessIterator end, 
+        RandomAccessIterator bufferBlock, Compare comp, ui32 blockLength, ui32 gallop) {
     if (end - begin >= 3 * blockLength) {
         for (RandomAccessIterator currentBlock = end - 3 * blockLength; currentBlock >= begin;
                 currentBlock -= blockLength) {
@@ -147,6 +137,29 @@ void inplaceMerge(RandomAccessIterator begin, RandomAccessIterator middle, Rando
     gallopMerge(begin, bufferBlock, (end - begin) % blockLength, blockLength, gallop, comp);
 
     insertionSort(bufferBlock, bufferBlock + blockLength, comp);
+}
 
+template <class RandomAccessIterator, class Compare>
+void inplaceMerge(RandomAccessIterator begin, RandomAccessIterator middle, RandomAccessIterator end,
+        Compare comp, ui32 gallop) {
+    ui32 blockLength = findBlockLength(begin, end);
+    ui32 remainingSize = blockLength + (end - begin) % blockLength;
+
+    RandomAccessIterator bufferBlock = prepareBufferBlock(begin, middle, end, blockLength, remainingSize);
+
+    sortBlocks(begin, bufferBlock, comp, blockLength);
+
+    mergeBlocks(begin, bufferBlock, comp, blockLength, gallop);
+
+    //sorting buffer
+
+    if (end - begin <= 2 * remainingSize) {
+        insertionSort(begin, end, comp);
+        return;
+    }
+
+    insertionSort(end - 2 * remainingSize, end, comp);
+
+    reverseMergeBlocks(begin, end, bufferBlock, comp, remainingSize, gallop);
 }
 #endif
